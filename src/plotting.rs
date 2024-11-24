@@ -32,7 +32,7 @@ const LABEL_STYLE_3D: (&str, u32, FontStyle, &RGBColor) =
 const CAPTION_STYLE_2D: (&str, u32, FontStyle, &RGBColor) =
     ("sans-serif", 80, FontStyle::Normal, &BLACK);
 const LABEL_STYLE_2D: (&str, u32, FontStyle, &RGBColor) =
-    ("Calibri", 20, FontStyle::Normal, &BLACK);
+    ("Calibri", 12, FontStyle::Normal, &BLACK);
 
 impl CorpusStats {
     pub fn plot_tg(&self) {
@@ -70,11 +70,7 @@ impl CorpusStats {
                 .cartesian_product(0..255u8)
                 .filter_map(|tg| {
                     let tg = (tg.0 .0, tg.0 .1, tg.1);
-                    if let Some(tg_freq) = self.trigrams_freq.get(&tg) {
-                        Some((tg.0 as i32, tg.1 as i32, tg.2 as i32, *tg_freq))
-                    } else {
-                        None
-                    }
+                    self.trigrams_freq.get(&tg).map(|tg_freq| (tg.0 as i32, tg.1 as i32, tg.2 as i32, *tg_freq))
                 }),
             5,
             BLUE,
@@ -115,8 +111,8 @@ impl CorpusStats {
                 if let Some(bg_freq) = self.bigrams_freq.get(&bg) {
                     let cond_prob = bg_freq / self.ungrams_freq.get(&bg.0).unwrap();
 
-                    Circle::new((bg.0 as i32, cond_prob as f64, bg.1 as i32), 3, BLUE)
-                } else if let Some(_) = self.ungrams_freq.get(&bg.0) {
+                    Circle::new((bg.0 as i32, cond_prob, bg.1 as i32), 3, BLUE)
+                } else if self.ungrams_freq.contains_key(&bg.0) {
                     Circle::new((bg.0 as i32, 0.0, bg.1 as i32), 2, ORANGE)
                 } else {
                     Circle::new((bg.0 as i32, 0.0, bg.1 as i32), 2, BLACK)
@@ -190,7 +186,7 @@ pub fn plot_regions(
         let arch_ranges_bytes_ser = PointSeries::of_element(
             ranges
                 .iter()
-                .flat_map(|range| range.clone().into_iter())
+                .flat_map(|range| range.clone())
                 .map(|offset| (offset, file_bytes[offset] as i32)),
             2,
             style,
@@ -210,7 +206,7 @@ pub fn plot_regions(
                 None => Some(range),
                 _ => None,
             })
-            .flat_map(|range| range.clone().into_iter())
+            .flat_map(|range| range.clone())
             .map(|offset| (offset, file_bytes[offset] as i32)),
         2,
         GREY,
@@ -237,7 +233,7 @@ pub fn plot_regions(
         .x_labels(100)
         .y_labels(24)
         .max_light_lines(4)
-        .x_label_formatter(&|offset| format!("{:x}", *offset as usize))
+        .x_label_formatter(&|offset| format!("{:x}", { *offset }))
         .y_label_formatter(&|offset| format!("{:x}", *offset as usize))
         .label_style(LABEL_STYLE_2D)
         .draw()
@@ -357,7 +353,7 @@ pub fn plot_divs(file_name: &str, file_len: usize, det_res: &ProcessedDetectionR
             + Circle::new((0, 0), size, style)
             + Text::new(
                 if ((coord.2 as usize).next_multiple_of(win_sz) / win_sz) % 0x4 == 0 {
-                    format!("{}", idx_to_arch.get(&coord.0).unwrap())
+                    idx_to_arch.get(&coord.0).unwrap().to_string()
                 } else {
                     String::from("")
                 },

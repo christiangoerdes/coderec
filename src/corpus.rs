@@ -62,7 +62,7 @@ pub fn load_corpus() -> Vec<CorpusStats> {
 
             // Corpus statistics are computed with a base count of 0.01 as
             // it will be used as divisor during guessing.
-            CorpusStats::new(arch.to_owned(), &data, 0.01)
+            CorpusStats::new(arch.to_owned(), data, 0.01)
         })
         .collect();
 
