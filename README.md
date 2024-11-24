@@ -2,7 +2,14 @@
 
 Find machine code in binary files or memory dumps. Example:
 
-TODO
+Cisco IOS firmware image:
+
+![](https://blog.eb9f.de/media/coderec/C800-UNI-159-3.M2_w81920_regions.png)
+
+Cisco boot ROM memory dump:
+
+![](https://blog.eb9f.de/media/coderec/ffc31000_ffd2b000.dump_w4096_regions.png)
+![](https://blog.eb9f.de/media/coderec/bfc00000_bfc90000.dump_w4096_regions.png)
 
 ## Installation
 
@@ -24,7 +31,7 @@ cargo install --locked --path .
 
 The underlying approach to machine code detection and corpus are taken from
 [`cpu_rec`](https://github.com/airbus-seclab/cpu_rec/). This codebase is a
-hard-fork of [cpu_rec_rs](https://github.com/trou/cpu_rec_rs).
+hard-fork of [`cpu_rec_rs`](https://github.com/trou/cpu_rec_rs).
 
 Why use this and not `cpu_rec_rs`? Some reasons:
 
@@ -36,7 +43,7 @@ Why use this and not `cpu_rec_rs`? Some reasons:
   it is acceptable to use smaller windows on large files -> better results),
 - better detection of string and high-entropy regions,
 
-See our [blog post](TODO) for more information.
+See our [blog post](https://blog.eb9f.de/2024/11/24/coderec.html) for more information.
 
 Note: as the approach is based on statistics, false positives are definitely
 possible. You should cross check with other sources and validate the results
