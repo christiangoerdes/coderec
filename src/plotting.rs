@@ -70,7 +70,9 @@ impl CorpusStats {
                 .cartesian_product(0..255u8)
                 .filter_map(|tg| {
                     let tg = (tg.0 .0, tg.0 .1, tg.1);
-                    self.trigrams_freq.get(&tg).map(|tg_freq| (tg.0 as i32, tg.1 as i32, tg.2 as i32, *tg_freq))
+                    self.trigrams_freq
+                        .get(&tg)
+                        .map(|tg_freq| (tg.0 as i32, tg.1 as i32, tg.2 as i32, *tg_freq))
                 }),
             5,
             BLUE,
@@ -155,6 +157,7 @@ pub fn plot_regions(
     file_len: usize,
     file_bytes: &[u8],
     det_res: &ProcessedDetectionResult,
+    big_file: bool,
 ) {
     let win_sz = det_res.win_sz;
     let arch_to_idx = &det_res.arch_to_idx;
@@ -183,40 +186,69 @@ pub fn plot_regions(
         let arch_idx = *arch_to_idx.get(arch).unwrap();
         let style = arch_idx_to_color(arch_idx);
 
+        if !big_file {
+            let arch_ranges_bytes_ser = PointSeries::of_element(
+                ranges
+                    .iter()
+                    .flat_map(|range| range.clone())
+                    .map(|offset| (offset, file_bytes[offset] as i32)),
+                2,
+                style,
+                &binding,
+            );
+            chart
+                .draw_series(arch_ranges_bytes_ser)
+                .unwrap()
+                .label(arch)
+                .legend(move |(x, y)| Rectangle::new([(x - 10, y + 10), (x, y)], style.filled()));
+        } else {
+            chart
+                .draw_series(ranges.iter().map(|range| {
+                    Rectangle::new([(range.start, 0), (range.end, 255)], style.filled())
+                }))
+                .unwrap()
+                .label(arch)
+                .legend(move |(x, y)| Rectangle::new([(x - 10, y + 10), (x, y)], style.filled()));
+        }
+    }
+    if !big_file {
         let arch_ranges_bytes_ser = PointSeries::of_element(
-            ranges
+            det_res
+                .range_to_final_result
                 .iter()
+                .filter_map(|(range, arch_op)| match arch_op {
+                    None => Some(range),
+                    _ => None,
+                })
                 .flat_map(|range| range.clone())
                 .map(|offset| (offset, file_bytes[offset] as i32)),
             2,
-            style,
+            GREY,
             &binding,
         );
         chart
             .draw_series(arch_ranges_bytes_ser)
             .unwrap()
-            .label(arch)
-            .legend(move |(x, y)| Rectangle::new([(x - 10, y + 10), (x, y)], style.filled()));
+            .label("unknown")
+            .legend(move |(x, y)| Rectangle::new([(x - 10, y + 10), (x, y)], GREY.filled()));
+    } else {
+        chart
+            .draw_series(
+                det_res
+                    .range_to_final_result
+                    .iter()
+                    .filter_map(|(range, arch_op)| match arch_op {
+                        None => Some(range),
+                        _ => None,
+                    })
+                    .map(|range| {
+                        Rectangle::new([(range.start, 0), (range.end, 255)], GREY.filled())
+                    }),
+            )
+            .unwrap()
+            .label("unknown")
+            .legend(move |(x, y)| Rectangle::new([(x - 10, y + 10), (x, y)], GREY.filled()));
     }
-    let arch_ranges_bytes_ser = PointSeries::of_element(
-        det_res
-            .range_to_final_result
-            .iter()
-            .filter_map(|(range, arch_op)| match arch_op {
-                None => Some(range),
-                _ => None,
-            })
-            .flat_map(|range| range.clone())
-            .map(|offset| (offset, file_bytes[offset] as i32)),
-        2,
-        GREY,
-        &binding,
-    );
-    chart
-        .draw_series(arch_ranges_bytes_ser)
-        .unwrap()
-        .label("unknown")
-        .legend(move |(x, y)| Rectangle::new([(x - 10, y + 10), (x, y)], GREY.filled()));
 
     chart
         .configure_series_labels()

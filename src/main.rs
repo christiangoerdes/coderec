@@ -323,11 +323,11 @@ fn detect_code(corpus_stats: &[CorpusStats], file_data: &[u8], filename: &str) -
     // Heuristic depending on file size, the number is actually half the window
     // size.
     let window = match file_data.len() {
-        0x100001..=0x1000000 => 0x1000, // 257 - 4096
-        0x20001..=0x100000 => 0x800,    // 65 - 512
-        0x8001..=0x20000 => 0x400,      // 33 - 128
-        0x1001..=0x8000 => 0x200,       // 9 - 64
-        0..=0x1000 => 0x100,            // 1 - 16
+        0x100001..=0x1000000 => 0x1000, // 257 - 4096, 1MiB - 16MiB
+        0x20001..=0x100000 => 0x800,    // 65 - 512, 128KiB - 1MiB
+        0x8001..=0x20000 => 0x400,      // 33 - 128, 32KiB - 128KiB
+        0x1001..=0x8000 => 0x200,       // 9 - 64, 4KiB - 32KiB
+        0..=0x1000 => 0x100,            // 1 - 16, 0B - 4KiB
         // From here on we grow the number of windows logarithmically in the
         // file size. Constant factor ensures smooth transition.
         l => (l / (170 * ((l as f64).log2() as usize))) & 0xFFFFF000,
@@ -360,6 +360,7 @@ fn main() -> Result<()> {
         .about("Identifies machine code in binary files.")
         .arg(arg!(-d - -debug))
         .arg(arg!(-v - -verbose))
+        .arg(arg!(--"big-file" "Optimized analysis for files larger than X00MiB."))
         .arg(arg!(--"plot-corpus" "Plot distributions of samples in corpus and exit."))
         .arg(arg!(--"plot-divs" "Plot raw analysis results in addition to region plot."))
         .arg(
@@ -380,6 +381,8 @@ fn main() -> Result<()> {
     };
     simple_logger::init_with_level(level)?;
 
+    let big_file = args.get_flag("big-file");
+
     let corpus_stats = load_corpus();
 
     if args.get_flag("plot-corpus") {
@@ -399,8 +402,11 @@ fn main() -> Result<()> {
         let raw_res = detect_code(&corpus_stats, &file_data, file);
         let processes_res: ProcessedDetectionResult = raw_res.into();
 
-        crate::plotting::plot_divs(file, file_data.len(), &processes_res);
-        crate::plotting::plot_regions(file, file_data.len(), &file_data, &processes_res);
+        if args.get_flag("plot-divs") {
+            crate::plotting::plot_divs(file, file_data.len(), &processes_res);
+        }
+
+        crate::plotting::plot_regions(file, file_data.len(), &file_data, &processes_res, big_file);
     }
 
     Ok(())
