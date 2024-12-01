@@ -203,8 +203,50 @@ pub fn plot_regions(
                 .legend(move |(x, y)| Rectangle::new([(x - 10, y + 10), (x, y)], style.filled()));
         } else {
             chart
-                .draw_series(ranges.iter().map(|range| {
-                    Rectangle::new([(range.start, 0), (range.end, 255)], style.filled())
+                .draw_series(ranges.iter().flat_map(|range| {
+                    // Encode information about the absolute divergence of the
+                    // closest arch in bi- and trigrams. Also highlight cases
+                    // where bi- and trigrams disagreed.
+                    const MAX_DIV_BEST_BG: f64 = 10.0;
+                    const MAX_DIV_BEST_TG: f64 = 10.0;
+
+                    let style_bg = if arch == &det_res.range_to_result_bg.get(range).unwrap().arch {
+                        style
+                    } else {
+                        RGBAColor::from(GREY)
+                    };
+                    let style_tg = if arch == &det_res.range_to_result_tg.get(range).unwrap().arch {
+                        style
+                    } else {
+                        RGBAColor::from(GREY)
+                    };
+
+                    let mut range_res_bg = (12.8
+                        * (MAX_DIV_BEST_BG
+                            - det_res.range_to_result_bg.get(range).unwrap().div.floor()))
+                        as i32;
+                    let mut range_res_tg = 256 - (12.8
+                        * (MAX_DIV_BEST_TG
+                            - det_res.range_to_result_tg.get(range).unwrap().div.floor()))
+                        as i32;
+
+                    if range_res_bg < 0 {
+                        range_res_bg = 1;
+                    }
+                    if range_res_tg < 0 {
+                        range_res_tg = 254;
+                    }
+
+                    [
+                        Rectangle::new(
+                            [(range.start, 0), (range.end, range_res_bg)],
+                            style_bg.filled(),
+                        ),
+                        Rectangle::new(
+                            [(range.start, range_res_tg), (range.end, 255)],
+                            style_tg.filled(),
+                        ),
+                    ].into_iter()
                 }))
                 .unwrap()
                 .label(arch)
