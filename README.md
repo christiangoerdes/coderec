@@ -9,7 +9,6 @@ Cisco IOS firmware image:
 Cisco boot ROM memory dump:
 
 ![](https://blog.eb9f.de/media/coderec/ffc31000_ffd2b000.dump_w4096_regions.png)
-![](https://blog.eb9f.de/media/coderec/bfc00000_bfc90000.dump_w4096_regions.png)
 
 ## Installation
 
@@ -26,6 +25,27 @@ Then you can install this like any other `cargo`-based Rust project:
 ```
 cargo install --locked --path .
 ```
+
+## How to Read the Plots
+
+There are two kinds of plots: byte plots and region plots. In a byte plot, each
+point corresponds to a byte in the file; The X-value is the byte's offset, and
+the Y-value is its value. Coloring is used to indicate the detection result for
+the region that the byte belongs to. Here is an example of a byte plot:
+
+![](https://valentinobst.de/31c929c36d54d2670a97f8485f09f99c43266e6b5ac51f2b322178d03c2c5f00/bfc00000_bfc90000.dump_w4096_regions.png)
+
+For larger files, byte plots become less useful. For such files you can use the
+region plots. Those include the detection result for each region of the target
+file as two colored bars at the corresponding offset. The length of the bars
+coming from the top and bottom indicates the quality of the tri- and bigram
+detection, respectively. Coloring of the bars for one region is used to indicate
+if the bi- and trigram detection agreed. Here is an example of a region plot:
+
+![](https://valentinobst.de/e97aabb102c6fc5b241a3eef5772511c7e4089ad5dd12bc859075e442a47fe95/c2800nm-adventerprisek9_sna-mz.124-22_core_02_cropped_w73728_regions.png)
+
+By default, byte plots are produced; The `--big-file` flag switches to region
+plots.
 
 ## About
 
