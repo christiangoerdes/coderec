@@ -18,7 +18,7 @@
 mod corpus;
 mod plotting;
 
-use crate::corpus::{load_corpus, CorpusStats};
+use crate::corpus::{is_strict, load_corpus, CorpusStats};
 
 use std::cmp::min;
 use std::collections::{BTreeMap, HashMap};
@@ -89,52 +89,102 @@ pub struct RangeResult {
     range_var: f64,
 }
 
+/// Main heuristic that decides which arch is assigned to a range.
 pub fn final_range_result(res_bg: &RangeResult, res_tg: &RangeResult) -> Option<Arch> {
     let RangeResult {
-        arch: bg_arch,
-        div: bg_div,
+        arch: arch_bg,
+        div: div_bg,
         range_mean: mean_bg,
         range_var: var_bg,
     } = res_bg;
     let std_deviation_bg = var_bg.sqrt();
     let RangeResult {
-        arch: tg_arch,
-        div: tg_div,
+        arch: arch_tg,
+        div: div_tg,
         range_mean: mean_tg,
         range_var: var_tg,
     } = res_tg;
     let std_deviation_tg = var_tg.sqrt();
 
-    if tg_div
-        .partial_cmp(&(mean_tg - 2.0 * std_deviation_tg))
+    // Limits on the absolute divergence of the closest arch.
+    const MAX_ABS_DIV_BG: f64 = 5.0;
+    const MAX_ABS_DIV_TG: f64 = 6.0;
+    const MAX_ABS_DIV_STRICT_BG: f64 = 4.0;
+    const MAX_ABS_DIV_STRICT_TG: f64 = 5.0;
+
+    // Threshold for instant detection via standard deviation.
+    const INSTANT_STD_DEV_BG: f64 = 2.0;
+    const INSTANT_STD_DEV_TG: f64 = 2.0;
+    const INSTANT_STD_DEV_STRICT_BG: f64 = 2.5;
+    const INSTANT_STD_DEV_STRICT_TG: f64 = 2.5;
+
+    // Threshold for conditional detection via standard deviation.
+    const COMM_STD_DEV_BG: f64 = 1.0;
+    const COMM_STD_DEV_TG: f64 = 1.0;
+    const COMM_STD_DEV_STRICT_BG: f64 = 1.5;
+    const COMM_STD_DEV_STRICT_TG: f64 = 1.5;
+
+    let (max_abs_div_bg, instant_std_dev_bg, comm_std_dev_bg): (f64, f64, f64) =
+        if is_strict(arch_bg) {
+            (
+                MAX_ABS_DIV_STRICT_BG,
+                INSTANT_STD_DEV_STRICT_BG,
+                COMM_STD_DEV_STRICT_BG,
+            )
+        } else {
+            (MAX_ABS_DIV_BG, INSTANT_STD_DEV_BG, COMM_STD_DEV_BG)
+        };
+    let (max_abs_div_tg, instant_std_dev_tg, comm_std_dev_tg): (f64, f64, f64) =
+        if is_strict(arch_tg) {
+            (
+                MAX_ABS_DIV_STRICT_TG,
+                INSTANT_STD_DEV_STRICT_TG,
+                COMM_STD_DEV_STRICT_TG,
+            )
+        } else {
+            (MAX_ABS_DIV_TG, INSTANT_STD_DEV_TG, COMM_STD_DEV_TG)
+        };
+
+    // Detect nothing if the closest arch is too far away in absolute numbers.
+    if div_bg.partial_cmp(&max_abs_div_bg).unwrap() == core::cmp::Ordering::Greater
+        && div_tg.partial_cmp(&max_abs_div_tg).unwrap() == core::cmp::Ordering::Greater
+    {
+        None
+    // Instant detection if an arch is clearly the best in either tri- or
+    // bigrams. Test trigrams first as they seem to be somewhat better.
+    } else if div_tg
+        .partial_cmp(&(mean_tg - instant_std_dev_tg * std_deviation_tg))
         .unwrap()
         == core::cmp::Ordering::Less
     {
-        Some(tg_arch.clone())
-    } else if bg_div
-        .partial_cmp(&(mean_bg - 2.0 * std_deviation_bg))
+        Some(arch_tg.clone())
+    } else if div_bg
+        .partial_cmp(&(mean_bg - instant_std_dev_bg * std_deviation_bg))
         .unwrap()
         == core::cmp::Ordering::Less
     {
-        Some(bg_arch.clone())
-    } else if bg_div
-        .partial_cmp(&(mean_bg - 1.0 * std_deviation_bg))
+        Some(arch_bg.clone())
+    // Main heuristic: Bi- and trigrams agree and the divergence stands out from
+    // the others.
+    } else if div_bg
+        .partial_cmp(&(mean_bg - comm_std_dev_bg * std_deviation_bg))
         .unwrap()
         == core::cmp::Ordering::Less
-        && tg_div
-            .partial_cmp(&(mean_tg - 1.0 * std_deviation_tg))
+        && div_tg
+            .partial_cmp(&(mean_tg - comm_std_dev_tg * std_deviation_tg))
             .unwrap()
             == core::cmp::Ordering::Less
-        && tg_arch == bg_arch
+        && arch_tg == arch_bg
     {
-        Some(tg_arch.clone())
-    } else if tg_div
+        Some(arch_tg.clone())
+    // Special case for detection of text via trigrams.
+    } else if div_tg
         .partial_cmp(&(mean_tg - 1.0 * std_deviation_tg))
         .unwrap()
         == core::cmp::Ordering::Less
-        && tg_arch.starts_with("_words")
+        && arch_tg.starts_with("_words")
     {
-        Some(tg_arch.clone())
+        Some(arch_tg.clone())
     } else {
         None
     }

@@ -14,14 +14,15 @@
     limitations under the License.
 */
 // Includes (many) changes by Valentin Obst.
-
-use log::{debug, info};
-use rayon::prelude::*;
-use rust_embed::Embed;
+use crate::Arch;
 
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::time::Instant;
+
+use log::{debug, info};
+use rayon::prelude::*;
+use rust_embed::Embed;
 
 #[derive(Embed)]
 #[folder = "cpu_rec_corpus"]
@@ -37,6 +38,14 @@ pub struct CorpusStats {
     pub ug_base_freq: f64,
     pub bg_base_freq: f64,
     pub tg_base_freq: f64,
+}
+
+/// For some arches we need to be a bit more strict as they cause many false
+/// positives.
+pub fn is_strict(arch: &Arch) -> bool {
+    const STRICT_ARCHES: &[&str] = &["OCaml", "IA-64", "IQ2000"];
+
+    STRICT_ARCHES.contains(&arch.as_str())
 }
 
 pub fn load_corpus() -> Vec<CorpusStats> {
