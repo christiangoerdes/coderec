@@ -16,13 +16,16 @@
 // Includes (many) changes by Valentin Obst.
 
 mod corpus;
+mod output;
 mod plotting;
 
 use crate::corpus::{is_strict, load_corpus, CorpusStats};
+use crate::output::CliJsonOutput;
 
 use std::cmp::min;
 use std::collections::{BTreeMap, HashMap};
 use std::convert::From;
+use std::io;
 use std::ops::Range;
 
 use anyhow::{Context, Result};
@@ -145,6 +148,7 @@ pub fn final_range_result(res_bg: &RangeResult, res_tg: &RangeResult) -> Option<
             (MAX_ABS_DIV_TG, INSTANT_STD_DEV_TG, COMM_STD_DEV_TG)
         };
 
+    #[allow(clippy::if_same_then_else)]
     // Detect nothing if the closest arch is too far away in absolute numbers.
     if div_bg.partial_cmp(&max_abs_div_bg).unwrap() == core::cmp::Ordering::Greater
         && div_tg.partial_cmp(&max_abs_div_tg).unwrap() == core::cmp::Ordering::Greater
@@ -409,10 +413,13 @@ fn main() -> Result<()> {
         .author("Valentin Obst <coderec@vpao.io>")
         .about("Identifies machine code in binary files.")
         .arg(arg!(-d - -debug))
+        .arg(arg!(-q - -quiet))
         .arg(arg!(-v - -verbose))
         .arg(arg!(--"big-file" "Optimized analysis for files larger than X00MiB."))
         .arg(arg!(--"plot-corpus" "Plot distributions of samples in corpus and exit."))
         .arg(arg!(--"plot-divs" "Plot raw analysis results in addition to region plot."))
+        .arg(arg!(--"no-plots" "Do not generate any plots."))
+        .arg(arg!(--"no-out" "Do not write detection results to stdout."))
         .arg(
             Arg::new("files")
                 .action(ArgAction::Append)
@@ -426,6 +433,8 @@ fn main() -> Result<()> {
         log::Level::Debug
     } else if args.get_flag("verbose") {
         log::Level::Info
+    } else if args.get_flag("quiet") {
+        log::Level::Error
     } else {
         log::Level::Warn
     };
@@ -452,11 +461,27 @@ fn main() -> Result<()> {
         let raw_res = detect_code(&corpus_stats, &file_data, file);
         let processes_res: ProcessedDetectionResult = raw_res.into();
 
-        if args.get_flag("plot-divs") {
-            crate::plotting::plot_divs(file, file_data.len(), &processes_res);
+        if !args.get_flag("no-plots") {
+            if args.get_flag("plot-divs") {
+                crate::plotting::plot_divs(file, file_data.len(), &processes_res);
+            }
+
+            crate::plotting::plot_regions(
+                file,
+                file_data.len(),
+                &file_data,
+                &processes_res,
+                big_file,
+            );
         }
 
-        crate::plotting::plot_regions(file, file_data.len(), &file_data, &processes_res, big_file);
+        if !args.get_flag("no-out") {
+            serde_json::to_writer(
+                io::stdout().lock(),
+                &CliJsonOutput::from((file.as_str(), &processes_res)),
+            )
+            .unwrap()
+        }
     }
 
     Ok(())
