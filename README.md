@@ -17,7 +17,7 @@ download the current corpus and unpack it before you can build the executable.
 Here's a one-liner for that:
 
 ```
-curl --proto '=https' --tlsv1.2 -sSf https://valentinobst.de/95c746fc63c16fc1474ed0cbbcead47a0d46383fd3296cbbef86db5ed4a362cf/cpu_rec_corpus.7z -o cpu_rec_corpus.7z && 7z x cpu_rec_corpus.7z && rm cpu_rec_corpus.7z
+curl --proto '=https' --tlsv1.2 -sSf https://valentinobst.de/a13f15d91f0f8846d748e42e7a881f783eb8f922861a63d9dfb74824d21337039dd8216f0373c3e5820c5e32de8f0a1880ec55456ff0da39f17d32f567d62b84/cpu_rec_corpus.tar.gz -o cpu_rec_corpus.tar.gz && tar xf cpu_rec_corpus.tar.gz && rm cpu_rec_corpus.tar.gz
 ```
 
 Then you can install this like any other `cargo`-based Rust project:
@@ -25,6 +25,11 @@ Then you can install this like any other `cargo`-based Rust project:
 ```
 cargo install --locked --path .
 ```
+
+### Packaging
+
+Users of Arch-based distros can install `coderec` via the
+[AUR](https://aur.archlinux.org/packages/coderec).
 
 ## How to Read the Plots
 
