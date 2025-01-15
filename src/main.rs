@@ -406,6 +406,11 @@ fn detect_code(corpus_stats: &[CorpusStats], file_data: &[u8], filename: &str) -
     res_ex
 }
 
+fn hex_to_int(arg: &str) -> Result<u64, std::num::ParseIntError> {
+    let tmp = arg.trim_start_matches("0x");
+    u64::from_str_radix(tmp, 16)
+}
+
 fn main() -> Result<()> {
     let app = clap::Command::new("coderec")
         .version(env!("CARGO_PKG_VERSION"))
@@ -420,6 +425,25 @@ fn main() -> Result<()> {
         .arg(arg!(--"plot-divs" "Plot raw analysis results in addition to region plot."))
         .arg(arg!(--"no-plots" "Do not generate any plots."))
         .arg(arg!(--"no-out" "Do not write detection results to stdout."))
+        .arg(
+            Arg::new("offset")
+                .short('o')
+                .long("offset")
+                .required(false)
+                .requires("length")
+                .action(clap::ArgAction::Set)
+                .value_parser(hex_to_int)
+                .help("Offset into the file where analysis starts."),
+        )
+        .arg(
+            Arg::new("length")
+                .short('l')
+                .long("length")
+                .required(false)
+                .action(clap::ArgAction::Set)
+                .value_parser(hex_to_int)
+                .help("Number of bytes that are analyzed."),
+        )
         .arg(
             Arg::new("files")
                 .action(ArgAction::Append)
@@ -458,18 +482,30 @@ fn main() -> Result<()> {
     for file in args.get_many::<String>("files").unwrap() {
         let file_data = std::fs::read(file).with_context(|| format!("Could not open {}", file))?;
 
-        let raw_res = detect_code(&corpus_stats, &file_data, file);
+        let (data, name) = if let Some(offset) = args.get_one::<u64>("offset") {
+            let length: &u64 = args.get_one("length").unwrap();
+            let name = format!("{}_o{:x}_l{:x}", file, offset, length);
+
+            (
+                &file_data[*offset as usize..(offset + length) as usize],
+                name,
+            )
+        } else {
+            (file_data.as_slice(), file.clone())
+        };
+
+        let raw_res = detect_code(&corpus_stats, data, &name);
         let processes_res: ProcessedDetectionResult = raw_res.into();
 
         if !args.get_flag("no-plots") {
             if args.get_flag("plot-divs") {
-                crate::plotting::plot_divs(file, file_data.len(), &processes_res);
+                crate::plotting::plot_divs(&name, data.len(), &processes_res);
             }
 
             crate::plotting::plot_regions(
-                file,
-                file_data.len(),
-                &file_data,
+                &name,
+                data.len(),
+                data,
                 &processes_res,
                 big_file,
             );
@@ -478,7 +514,7 @@ fn main() -> Result<()> {
         if !args.get_flag("no-out") {
             serde_json::to_writer(
                 io::stdout().lock(),
-                &CliJsonOutput::from((file.as_str(), &processes_res)),
+                &CliJsonOutput::from((name.as_str(), &processes_res)),
             )
             .unwrap()
         }
