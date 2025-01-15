@@ -158,6 +158,7 @@ pub fn plot_regions(
     file_bytes: &[u8],
     det_res: &ProcessedDetectionResult,
     big_file: bool,
+    base_address: u64,
 ) {
     let win_sz = det_res.win_sz;
     let arch_to_idx = &det_res.arch_to_idx;
@@ -307,7 +308,7 @@ pub fn plot_regions(
         .x_labels(100)
         .y_labels(24)
         .max_light_lines(4)
-        .x_label_formatter(&|offset| format!("{:x}", { *offset }))
+        .x_label_formatter(&|offset| format!("{:x}", { *offset + base_address as usize }))
         .y_label_formatter(&|offset| format!("{:x}", *offset as usize))
         .label_style(LABEL_STYLE_2D)
         .draw()

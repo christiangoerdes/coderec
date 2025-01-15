@@ -445,6 +445,16 @@ fn main() -> Result<()> {
                 .help("Number of bytes that are analyzed."),
         )
         .arg(
+            Arg::new("base")
+                .short('b')
+                .long("base-address")
+                .required(false)
+                .action(clap::ArgAction::Set)
+                .value_parser(hex_to_int)
+                .help("Base address of the file.")
+                .default_value("0"),
+        )
+        .arg(
             Arg::new("files")
                 .action(ArgAction::Append)
                 .value_parser(clap::builder::NonEmptyStringValueParser::new())
@@ -466,6 +476,8 @@ fn main() -> Result<()> {
 
     let big_file = args.get_flag("big-file");
 
+    let base_address: &u64 = args.get_one("base").unwrap();
+
     let corpus_stats = load_corpus();
 
     if args.get_flag("plot-corpus") {
@@ -482,16 +494,17 @@ fn main() -> Result<()> {
     for file in args.get_many::<String>("files").unwrap() {
         let file_data = std::fs::read(file).with_context(|| format!("Could not open {}", file))?;
 
-        let (data, name) = if let Some(offset) = args.get_one::<u64>("offset") {
+        let (data, name, base_address) = if let Some(offset) = args.get_one::<u64>("offset") {
             let length: &u64 = args.get_one("length").unwrap();
             let name = format!("{}_o{:x}_l{:x}", file, offset, length);
 
             (
                 &file_data[*offset as usize..(offset + length) as usize],
                 name,
+                *base_address + *offset,
             )
         } else {
-            (file_data.as_slice(), file.clone())
+            (file_data.as_slice(), file.clone(), *base_address)
         };
 
         let raw_res = detect_code(&corpus_stats, data, &name);
@@ -508,6 +521,7 @@ fn main() -> Result<()> {
                 data,
                 &processes_res,
                 big_file,
+                base_address,
             );
         }
 
