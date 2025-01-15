@@ -1,3 +1,7 @@
+0.1.3:
+- add base-address option
+- add offset+length options
+
 0.1.2:
 - fix typo in license
 - fix Cargo.lock
