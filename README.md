@@ -20,6 +20,15 @@ Here's a one-liner for that:
 curl --proto '=https' --tlsv1.2 -sSf https://valentinobst.de/a13f15d91f0f8846d748e42e7a881f783eb8f922861a63d9dfb74824d21337039dd8216f0373c3e5820c5e32de8f0a1880ec55456ff0da39f17d32f567d62b84/cpu_rec_corpus.tar.gz -o cpu_rec_corpus.tar.gz && tar xf cpu_rec_corpus.tar.gz && rm cpu_rec_corpus.tar.gz
 ```
 
+Building this project requires
+[`pkg-config`](https://en.wikipedia.org/wiki/Pkg-config)
+and `libfontconfig1` to be present. On Debian-based systems those can be
+installed via
+
+```shell
+apt install libfontconfig1-dev pkg-config
+```
+
 Then you can install this like any other `cargo`-based Rust project:
 
 ```
