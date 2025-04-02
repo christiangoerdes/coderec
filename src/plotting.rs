@@ -165,7 +165,7 @@ pub fn plot_regions(
     let arch_to_best_map = &det_res.arch_to_final_ranges;
 
     let file_name = file_name.split("/").last().unwrap();
-    let plot_name = format!("{}_w{}_regions.bmp", file_name, win_sz);
+    let plot_name = format!("{}_w{}_regions.png", file_name, win_sz);
 
     let root = BitMapBackend::new(&plot_name, (5000, 500)).into_drawing_area();
     root.fill(&WHITE).unwrap();
