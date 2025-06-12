@@ -1,5 +1,8 @@
 # coderec
 
+*This repository is a fork of [coderec](https://github.com/vobst/coderec) that transforms the original CLI tool into 
+a reusable Rust library (cdylib).*
+
 Find machine code in binary files or memory dumps. Example:
 
 Cisco IOS firmware image:
