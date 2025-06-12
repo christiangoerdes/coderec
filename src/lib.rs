@@ -29,6 +29,9 @@ use std::io;
 use std::ops::Range;
 use std::ffi::{CStr,CString};
 use std::os::raw::c_char;
+use jni::JNIEnv;
+use jni::objects::{JClass, JString};
+use jni::sys::jstring;
 
 use anyhow::{Context, Result};
 use clap::{arg, Arg, ArgAction};
@@ -569,4 +572,21 @@ pub extern "C" fn coderec_free_string(s: *mut c_char) {
         return;
     }
     unsafe { CString::from_raw(s) };
+}
+
+#[no_mangle]
+pub extern "system" fn Java_com_goerdes_correlf_components_CoderecJni_detectFile(
+    mut env: JNIEnv,
+    _class: JClass,
+    jpath: JString,
+) -> jstring {
+    let path: String = env
+        .get_string(&jpath)
+        .expect("Invalid jstring")
+        .into();
+    let result = detect_file(&path).unwrap_or_default();
+    let output = env
+        .new_string(result)
+        .expect("Can't create jstring");
+    output.into_raw()
 }

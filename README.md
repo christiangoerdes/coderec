@@ -1,7 +1,10 @@
 # coderec
 
 *This repository is a fork of [coderec](https://github.com/vobst/coderec) that transforms the original CLI tool into 
-a reusable Rust library (cdylib).*
+a reusable Rust library (`cdylib`).* 
+
+*It also provides an application-specific JNI entry point (`Java_com_goerdes_correlf_components_CoderecJni_detectFile`) so that the Spring component can call into Rust directly and retrieve JSON-formatted analysis results.*
+
 
 Find machine code in binary files or memory dumps. Example:
 

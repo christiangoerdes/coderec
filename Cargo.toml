@@ -6,11 +6,12 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
-name = "coderec_jna"
+name = "coderec_jni"
 crate-type = ["cdylib"]
 
 [dependencies]
 anyhow = "1.0.71"
+jni = "0.21.1"
 clap = "~4.4"
 itertools = "0.13.0"
 log = "0.4.19"
