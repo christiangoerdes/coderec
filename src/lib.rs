@@ -27,6 +27,8 @@ use std::collections::{BTreeMap, HashMap};
 use std::convert::From;
 use std::io;
 use std::ops::Range;
+use std::ffi::{CStr,CString};
+use std::os::raw::c_char;
 
 use anyhow::{Context, Result};
 use clap::{arg, Arg, ArgAction};
@@ -411,7 +413,7 @@ fn hex_to_int(arg: &str) -> Result<u64, std::num::ParseIntError> {
     u64::from_str_radix(tmp, 16)
 }
 
-fn main() -> Result<()> {
+pub fn run() -> Result<()> {
     let app = clap::Command::new("coderec")
         .version(env!("CARGO_PKG_VERSION"))
         .propagate_version(true)
@@ -535,4 +537,36 @@ fn main() -> Result<()> {
     }
 
     Ok(())
+}
+
+pub fn detect_file(path: &str) -> Result<String> {
+    let corpus_stats = load_corpus();
+    let data = std::fs::read(path).with_context(|| format!("Could not open {}", path))?;
+    let raw_res = detect_code(&corpus_stats, &data, path);
+    let res: ProcessedDetectionResult = raw_res.into();
+    Ok(serde_json::to_string(&CliJsonOutput::from((path, &res)))?)
+}
+
+#[no_mangle]
+pub extern "C" fn coderec_detect_file(path: *const c_char) -> *mut c_char {
+    if path.is_null() {
+        return std::ptr::null_mut();
+    }
+    let c_str = unsafe { CStr::from_ptr(path) };
+    let filename = match c_str.to_str() {
+        Ok(s) => s,
+        Err(_) => return std::ptr::null_mut(),
+    };
+    match detect_file(filename) {
+        Ok(json) => CString::new(json).unwrap().into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn coderec_free_string(s: *mut c_char) {
+    if s.is_null() {
+        return;
+    }
+    unsafe { CString::from_raw(s) };
 }

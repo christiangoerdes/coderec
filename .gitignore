@@ -4,3 +4,9 @@ cpu_rec_corpus/
 *.svg
 *.png
 *.bin
+/.idea/.gitignore
+/.idea/coderec.iml
+/.idea/discord.xml
+/.idea/misc.xml
+/.idea/modules.xml
+/.idea/vcs.xml
